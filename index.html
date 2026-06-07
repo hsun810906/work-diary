@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工作日誌</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap');
+:root {
+  --bg:#1a1c1e;--surface:#242628;--surface2:#2e3033;--border:#3a3d42;
+  --text:#e8e6e0;--muted:#7a7870;--accent:#e8a030;--accent2:#5ba4d4;
+  --green:#5cb87a;--red:#e06060;--purple:#a78bfa;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+header{padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);position:sticky;top:0;z-index:100}
+.logo{font-size:16px;font-weight:900;letter-spacing:.06em;color:var(--accent)}
+.sync-status{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;margin-top:3px}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.sync-dot.ok{background:var(--green)}.sync-dot.syncing{background:var(--accent);animation:pulse 1s infinite}.sync-dot.err{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.month-nav{display:flex;align-items:center;gap:8px}
+.month-nav span{font-family:'DM Mono',monospace;font-size:13px;color:var(--text)}
+.nav-btn{width:28px;height:28px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent)}
+.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border)}
+.tab{flex:1;padding:11px 8px;text-align:center;font-size:12px;font-weight:600;letter-spacing:.06em;cursor:pointer;border:none;background:none;color:var(--muted);transition:all .15s;border-bottom:2px solid transparent}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.panel{display:none}.panel.active{display:block}
+.input-wrap{padding:14px 14px 90px}
+.date-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px}
+.date-row label{font-size:11px;color:var(--muted);white-space:nowrap;font-weight:600;letter-spacing:.06em}
+input[type="date"]{background:none;border:none;color:var(--text);font-family:'DM Mono',monospace;font-size:15px;font-weight:500;outline:none;flex:1;color-scheme:dark}
+.photo-card{background:var(--surface);border:1px solid var(--purple);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.photo-card-header{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;cursor:pointer}
+.photo-card-title{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;color:var(--purple)}
+.photo-card-sub{font-size:11px;color:var(--muted)}
+.photo-card-toggle{font-size:12px;color:var(--muted);transition:transform .2s}
+.photo-card.open .photo-card-toggle{transform:rotate(180deg)}
+.photo-card-body{display:none;padding:0 14px 14px;border-top:1px solid var(--border)}
+.photo-card.open .photo-card-body{display:block}
+.photo-zone{border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;margin-top:12px;transition:border-color .2s}
+.photo-zone:hover{border-color:var(--purple)}
+.photo-zone input{display:none}
+.photo-zone .pz-icon{font-size:28px;margin-bottom:6px}
+.photo-zone p{font-size:12px;color:var(--muted);line-height:1.5}
+#photo-preview{width:100%;border-radius:8px;margin-top:10px;display:none;border:1px solid var(--border)}
+.ai-scan-btn{width:100%;margin-top:10px;padding:11px;background:var(--purple);color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans TC',sans-serif;transition:opacity .15s;letter-spacing:.05em}
+.ai-scan-btn:hover{opacity:.85}.ai-scan-btn:disabled{opacity:.45;cursor:not-allowed}
+.ai-result-box{margin-top:10px;background:var(--surface2);border:1px solid var(--purple);border-radius:8px;padding:12px;font-size:12px;line-height:1.7;display:none}
+.ai-result-box .ai-tag{color:var(--purple);font-weight:700;font-size:11px;margin-bottom:6px}
+.apply-btn{width:100%;margin-top:8px;padding:10px;background:rgba(167,139,250,.15);color:var(--purple);border:1px solid var(--purple);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans TC',sans-serif;transition:background .15s}
+.apply-btn:hover{background:rgba(167,139,250,.25)}
+.emp-grid{display:flex;flex-direction:column;gap:8px}
+.emp-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .15s}
+.emp-card.has-data{border-color:var(--accent2)}.emp-card.is-rest{border-color:var(--green)}
+.emp-card-header{display:flex;align-items:center;padding:10px 14px;gap:12px;cursor:pointer}
+.emp-avatar{width:36px;height:36px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--accent);flex-shrink:0}
+.emp-card.is-rest .emp-avatar{color:var(--green);border-color:var(--green)}
+.emp-card.has-data .emp-avatar{color:var(--accent2);border-color:var(--accent2)}
+.emp-name{font-weight:700;font-size:15px;flex:1}
+.emp-preview{font-size:11px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.emp-toggle{font-size:12px;color:var(--muted);transition:transform .2s}
+.emp-card.open .emp-toggle{transform:rotate(180deg)}
+.emp-body{display:none;padding:0 14px 14px;border-top:1px solid var(--border)}
+.emp-card.open .emp-body{display:block}
+.status-row{display:flex;gap:7px;padding:10px 0;flex-wrap:wrap}
+.s-btn{padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:none;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:'Noto Sans TC',sans-serif;transition:all .15s}
+.s-btn:hover{border-color:var(--text);color:var(--text)}
+.s-btn.sel-rest{border-color:var(--green);color:var(--green);background:rgba(92,184,122,.1)}
+.s-btn.sel-night{border-color:var(--accent2);color:var(--accent2);background:rgba(91,164,212,.1)}
+.s-btn.sel-ot{border-color:var(--accent);color:var(--accent);background:rgba(232,160,48,.1)}
+.loc-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'Noto Sans TC',sans-serif;font-size:13px;outline:none;transition:border-color .15s}
+.loc-input:focus{border-color:var(--accent2)}.loc-input::placeholder{color:var(--muted)}
+.save-bar{position:fixed;bottom:0;left:0;right:0;padding:12px 14px;background:var(--surface);border-top:1px solid var(--border);z-index:50}
+.save-btn-main{width:100%;padding:13px;background:var(--accent);color:#1a1a18;border:none;border-radius:8px;font-size:14px;font-weight:900;cursor:pointer;font-family:'Noto Sans TC',sans-serif;letter-spacing:.06em;transition:opacity .15s}
+.save-btn-main:hover{opacity:.88}.save-btn-main:disabled{opacity:.5;cursor:not-allowed}
+.table-wrap{padding:14px 14px 20px;overflow-x:auto}
+.stats-row{display:flex;gap:8px;margin-bottom:14px}
+.stat-box{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 8px;text-align:center}
+.stat-n{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;color:var(--accent)}
+.stat-l{font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.05em}
+.tbl-actions{display:flex;justify-content:flex-end;margin-bottom:10px}
+.export-btn{padding:8px 14px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Noto Sans TC',sans-serif}
+.export-btn:hover{border-color:var(--accent);color:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:700px}
+th{background:var(--surface2);padding:8px 6px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+th.emp-col{color:var(--accent2)}
+td{padding:7px 6px;border-bottom:1px solid var(--border);vertical-align:top;text-align:center}
+.day-cell{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;white-space:nowrap;text-align:left}
+.dow{font-size:10px;color:var(--muted)}.dow.sun{color:var(--red)}.dow.sat{color:var(--accent2)}
+.cell-rest{color:var(--green);font-size:11px;font-weight:700}
+.cell-work{color:var(--text);font-size:11px;line-height:1.4}
+.cell-tag{display:inline-block;font-size:9px;padding:1px 5px;border-radius:8px;margin-bottom:2px;font-weight:700}
+.tag-ot{background:rgba(232,160,48,.2);color:var(--accent)}.tag-night{background:rgba(91,164,212,.2);color:var(--accent2)}
+.cell-empty{color:var(--muted);font-size:10px}
+tr:hover td{background:rgba(255,255,255,.02)}
+.spinner-sm{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--green);color:#fff;padding:9px 20px;border-radius:20px;font-size:13px;font-weight:600;transition:transform .25s;z-index:999;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}.toast.error{background:var(--red)}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">📋 工作日誌</div>
+    <div class="sync-status"><div class="sync-dot" id="sync-dot"></div><span id="sync-text">連線中...</span></div>
+  </div>
+  <div class="month-nav">
+    <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+    <span id="month-label"></span>
+    <button class="nav-btn" onclick="changeMonth(1)">›</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('input',this)">✏️ 每日輸入</button>
+  <button class="tab" onclick="switchTab('table',this)">📊 月份總覽</button>
+</div>
+
+<div class="panel active" id="panel-input">
+  <div class="input-wrap">
+    <div class="date-row">
+      <label>📅 日期</label>
+      <input type="date" id="entry-date" onchange="loadDayData()">
+    </div>
+
+    <div class="photo-card" id="photo-card">
+      <div class="photo-card-header" onclick="togglePhotoCard()">
+        <div>
+          <div class="photo-card-title">📷 拍照 AI 辨識</div>
+          <div class="photo-card-sub">拍紙本記錄，自動填入所有人地點</div>
+        </div>
+        <div class="photo-card-toggle">▼</div>
+      </div>
+      <div class="photo-card-body">
+        <div class="photo-zone" onclick="document.getElementById('photo-input').click()">
+          <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+          <div class="pz-icon">📸</div>
+          <p>點此拍照或選圖片<br>紙本排班表、手寫記錄都可以</p>
+        </div>
+        <img id="photo-preview" alt="預覽">
+        <button class="ai-scan-btn" id="ai-scan-btn" onclick="runAIScan()" style="display:none">🤖 AI 辨識並填入所有人地點</button>
+        <div class="ai-result-box" id="ai-result-box">
+          <div class="ai-tag">✨ AI 辨識結果（確認後套用）</div>
+          <div id="ai-result-text"></div>
+          <button class="apply-btn" onclick="applyAIResult()">✅ 套用到所有人欄位</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="emp-grid" id="emp-grid"></div>
+  </div>
+  <div class="save-bar">
+    <button class="save-btn-main" id="save-btn" onclick="saveDay()">☁️ 儲存並同步到雲端</button>
+  </div>
+</div>
+
+<div class="panel" id="panel-table">
+  <div class="table-wrap">
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-n" id="s-days">0</div><div class="stat-l">已記錄天</div></div>
+      <div class="stat-box"><div class="stat-n" id="s-entries">0</div><div class="stat-l">總筆數</div></div>
+    </div>
+    <div class="tbl-actions"><button class="export-btn" onclick="exportCSV()">⬇ 匯出 CSV</button></div>
+    <table><thead id="table-head"></thead><tbody id="table-body"></tbody></table>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const EMPLOYEES = ['阿道','阿潤','阿德','阿黃','阿頂','阿生','阿貴','阿河','阿胖'];
+const API = 'https://script.google.com/macros/s/AKfycbwkYUi3yUCKrKEMUj2BIw07eGCp45ltuJX8PAYbcPqfXpf2bSoKV3gmAkF4lZ3IpR5aIw/exec';
+
+let currentYear, currentMonth, empStatus={}, monthCache={}, pendingPhotoB64=null, aiParsed=null;
+
+function init() {
+  const today = new Date();
+  currentYear = today.getFullYear();
+  currentMonth = today.getMonth()+1;
+  document.getElementById('entry-date').value = fmtDate(today);
+  updateMonthLabel();
+  buildEmpCards();
+  loadDayData();
+}
+
+function fmtDate(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+// Use GET requests with JSONP-style to avoid CORS
+function apiGet(params) {
+  return new Promise((resolve, reject) => {
+    const url = API + '?' + new URLSearchParams(params).toString();
+    // Use no-cors mode won't work for reading, use fetch with mode cors
+    fetch(url, { method:'GET', mode:'cors' })
+      .then(r => r.json())
+      .then(resolve)
+      .catch(reject);
+  });
+}
+
+function apiPost(payload) {
+  return fetch(API, {
+    method:'POST',
+    mode:'cors',
+    body: JSON.stringify(payload)
+  }).then(r=>r.json());
+}
+
+function setSyncStatus(state, text) {
+  document.getElementById('sync-dot').className = 'sync-dot '+state;
+  document.getElementById('sync-text').textContent = text;
+}
+
+function changeMonth(d) {
+  currentMonth+=d;
+  if(currentMonth>12){currentMonth=1;currentYear++;}
+  if(currentMonth<1){currentMonth=12;currentYear--;}
+  updateMonthLabel();
+  if(document.getElementById('panel-table').classList.contains('active')) loadAndRenderTable();
+}
+function updateMonthLabel(){ document.getElementById('month-label').textContent=`${currentYear}-${String(currentMonth).padStart(2,'0')}`; }
+
+function switchTab(tab,btn) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  if(tab==='table') loadAndRenderTable();
+}
+
+function togglePhotoCard(){ document.getElementById('photo-card').classList.toggle('open'); }
+
+function handlePhoto(input) {
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    pendingPhotoB64=e.target.result.split(',')[1];
+    const img=document.getElementById('photo-preview');
+    img.src=e.target.result; img.style.display='block';
+    document.getElementById('ai-scan-btn').style.display='block';
+    document.getElementById('ai-result-box').style.display='none';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function runAIScan() {
+  if(!pendingPhotoB64) return;
+  const btn=document.getElementById('ai-scan-btn');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner-sm"></span>AI 辨識中...';
+  const prompt=`這是一張工作記錄的照片（排班表、手寫記錄或Excel截圖）。
+員工名單：${EMPLOYEES.join('、')}
+請辨識每位員工今天的工作地點或狀態。只回傳JSON，9個人都要有：
+{"阿道":{"location":"地點","status":[]},...}
+規則：休假填status:["休"] location:""；看不出來填空；status只能包含"休"/"加班"/"過夜"`;
+  try {
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:1000,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:pendingPhotoB64}},
+          {type:'text',text:prompt}
+        ]}]
+      })
+    });
+    const data=await res.json();
+    const raw=data.content?.map(b=>b.text||'').join('')||'';
+    aiParsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    const lines=EMPLOYEES.map(name=>{
+      const e=aiParsed[name];
+      if(!e) return `${name}：未辨識`;
+      if(e.status?.includes('休')) return `${name}：休假`;
+      return `${name}：${[e.status?.join('/'),e.location].filter(Boolean).join(' ')||'未辨識'}`;
+    }).join('<br>');
+    document.getElementById('ai-result-text').innerHTML=lines;
+    document.getElementById('ai-result-box').style.display='block';
+    showToast('✅ 辨識完成！請確認後套用');
+  } catch(err) {
+    showToast('辨識失敗，請手動輸入',true);
+  }
+  btn.disabled=false;
+  btn.innerHTML='🤖 AI 辨識並填入所有人地點';
+}
+
+function applyAIResult() {
+  if(!aiParsed) return;
+  EMPLOYEES.forEach(name=>{
+    const e=aiParsed[name]; if(!e) return;
+    empStatus[name]=new Set(e.status||[]);
+    const locEl=document.getElementById('loc-'+name);
+    if(locEl) locEl.value=e.location||'';
+    refreshCard(name);
+    if(e.location||(e.status&&e.status.length)) document.getElementById('card-'+name).classList.add('open');
+  });
+  showToast('✅ 已套用！請檢查後儲存');
+  document.getElementById('photo-card').classList.remove('open');
+}
+
+function buildEmpCards() {
+  const grid=document.getElementById('emp-grid');
+  grid.innerHTML='';
+  EMPLOYEES.forEach(name=>{
+    const card=document.createElement('div');
+    card.className='emp-card'; card.id='card-'+name;
+    card.innerHTML=`
+      <div class="emp-card-header" onclick="toggleCard('${name}')">
+        <div class="emp-avatar" id="av-${name}">${name.slice(1)}</div>
+        <div class="emp-name">${name}</div>
+        <div class="emp-preview" id="prev-${name}">未輸入</div>
+        <div class="emp-toggle">▼</div>
+      </div>
+      <div class="emp-body">
+        <div class="status-row">
+          <button class="s-btn" id="btn-rest-${name}" onclick="toggleSt('${name}','休')">休假</button>
+          <button class="s-btn" id="btn-night-${name}" onclick="toggleSt('${name}','過夜')">過夜</button>
+          <button class="s-btn" id="btn-ot-${name}" onclick="toggleSt('${name}','加班')">加班</button>
+        </div>
+        <input class="loc-input" id="loc-${name}" placeholder="輸入工作地點..." oninput="updatePreview('${name}')">
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function toggleCard(name){ document.getElementById('card-'+name).classList.toggle('open'); }
+
+function toggleSt(name,val) {
+  if(!empStatus[name]) empStatus[name]=new Set();
+  const s=empStatus[name];
+  if(s.has(val)) s.delete(val); else s.add(val);
+  refreshCard(name);
+}
+
+function refreshCard(name) {
+  const s=empStatus[name]||new Set();
+  const loc=document.getElementById('loc-'+name)?.value.trim()||'';
+  document.getElementById('btn-rest-'+name).className='s-btn'+(s.has('休')?' sel-rest':'');
+  document.getElementById('btn-night-'+name).className='s-btn'+(s.has('過夜')?' sel-night':'');
+  document.getElementById('btn-ot-'+name).className='s-btn'+(s.has('加班')?' sel-ot':'');
+  const card=document.getElementById('card-'+name);
+  card.classList.remove('has-data','is-rest');
+  if(s.has('休')) card.classList.add('is-rest');
+  else if(loc||s.size>0) card.classList.add('has-data');
+  updatePreview(name);
+}
+
+function updatePreview(name) {
+  const s=empStatus[name]||new Set();
+  const loc=document.getElementById('loc-'+name)?.value.trim()||'';
+  const prev=document.getElementById('prev-'+name);
+  if(s.has('休')){prev.textContent='休假';refreshCard(name);return;}
+  prev.textContent=[[...s].join('/'),loc].filter(Boolean).join(' · ')||'未輸入';
+  refreshCard(name);
+}
+
+async function loadDayData() {
+  const date=document.getElementById('entry-date').value;
+  pendingPhotoB64=null; aiParsed=null;
+  document.getElementById('photo-preview').style.display='none';
+  document.getElementById('ai-scan-btn').style.display='none';
+  document.getElementById('ai-result-box').style.display='none';
+  document.getElementById('photo-input').value='';
+  EMPLOYEES.forEach(name=>{
+    empStatus[name]=new Set();
+    const locEl=document.getElementById('loc-'+name);
+    if(locEl) locEl.value='';
+    refreshCard(name);
+  });
+  setSyncStatus('syncing','載入中...');
+  try {
+    const res=await apiGet({action:'load',date});
+    if(res.ok&&res.data) {
+      EMPLOYEES.forEach(name=>{
+        const d=res.data[name]; if(!d) return;
+        empStatus[name]=new Set(d.status||[]);
+        const locEl=document.getElementById('loc-'+name);
+        if(locEl) locEl.value=d.location||'';
+        refreshCard(name);
+      });
+    }
+    setSyncStatus('ok','已同步');
+  } catch(e) {
+    setSyncStatus('err','離線');
+  }
+}
+
+async function saveDay() {
+  const date=document.getElementById('entry-date').value;
+  if(!date){showToast('請選擇日期',true);return;}
+  const btn=document.getElementById('save-btn');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner-sm"></span>同步中...';
+  setSyncStatus('syncing','儲存中...');
+  const entries={};
+  EMPLOYEES.forEach(name=>{
+    entries[name]={
+      status:[...(empStatus[name]||new Set())],
+      location:document.getElementById('loc-'+name)?.value.trim()||''
+    };
+  });
+  try {
+    // Try GET with encoded params (more reliable across origins)
+    const params={action:'save',date,entries:JSON.stringify(entries)};
+    const res=await apiGet(params);
+    if(res.ok){setSyncStatus('ok','已同步');showToast('☁️ 已儲存到雲端！');}
+    else throw new Error(res.error);
+  } catch(e) {
+    setSyncStatus('err','同步失敗');
+    showToast('儲存失敗，請重試',true);
+  }
+  btn.disabled=false;
+  btn.innerHTML='☁️ 儲存並同步到雲端';
+}
+
+async function loadAndRenderTable() {
+  document.getElementById('table-body').innerHTML='<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--muted)">載入中...</td></tr>';
+  setSyncStatus('syncing','載入中...');
+  try {
+    const res=await apiGet({action:'loadMonth',year:currentYear,month:currentMonth});
+    if(res.ok){monthCache=res.data||{};setSyncStatus('ok','已同步');}
+  } catch(e){setSyncStatus('err','離線');}
+  renderTable();
+}
+
+function renderTable() {
+  const daysInMonth=new Date(currentYear,currentMonth,0).getDate();
+  const dowNames=['日','一','二','三','四','五','六'];
+  document.getElementById('table-head').innerHTML=`<tr><th>日期</th>${EMPLOYEES.map(n=>`<th class="emp-col">${n}</th>`).join('')}</tr>`;
+  let dayCount=0,entryCount=0;
+  const tbody=document.getElementById('table-body');
+  tbody.innerHTML='';
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr=`${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow=new Date(dateStr).getDay();
+    const dowClass=dow===0?'sun':dow===6?'sat':'';
+    const dayData=monthCache[dateStr];
+    if(dayData) dayCount++;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="day-cell">${d}<br><span class="dow ${dowClass}">${dowNames[dow]}</span></td>`;
+    EMPLOYEES.forEach(name=>{
+      const e=dayData&&dayData[name];
+      let html='';
+      if(!e||(e.status.length===0&&!e.location)){
+        html='<span class="cell-empty">—</span>';
+      } else if(e.status.includes('休')){
+        html='<span class="cell-rest">休</span>';
+      } else {
+        const tags=e.status.filter(s=>s!=='休').map(s=>
+          s==='加班'?`<span class="cell-tag tag-ot">加班</span>`:
+          s==='過夜'?`<span class="cell-tag tag-night">過夜</span>`:''
+        ).join('');
+        html=`${tags}<div class="cell-work">${e.location||''}</div>`;
+        if(e.location||e.status.length) entryCount++;
+      }
+      tr.innerHTML+=`<td>${html}</td>`;
+    });
+    tbody.appendChild(tr);
+  }
+  document.getElementById('s-days').textContent=dayCount;
+  document.getElementById('s-entries').textContent=entryCount;
+}
+
+function exportCSV() {
+  const daysInMonth=new Date(currentYear,currentMonth,0).getDate();
+  const dowNames=['日','一','二','三','四','五','六'];
+  let csv=`日期,星期,${EMPLOYEES.join(',')}\n`;
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr=`${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow=dowNames[new Date(dateStr).getDay()];
+    const dayData=monthCache[dateStr]||{};
+    const cells=EMPLOYEES.map(name=>{
+      const e=dayData[name];
+      if(!e||(!e.status.length&&!e.location)) return '';
+      if(e.status.includes('休')) return '休';
+      return [e.status.filter(s=>s!=='休').join('/'),e.location].filter(Boolean).join(' ');
+    });
+    csv+=`${dateStr},${dow},${cells.map(c=>`"${c}"`).join(',')}\n`;
+  }
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`工作日誌_${currentYear}-${String(currentMonth).padStart(2,'0')}.csv`;
+  a.click();
+}
+
+function showToast(msg,isError=false) {
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast'+(isError?' error':'');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+init();
+</script>
+</body>
+</html>
